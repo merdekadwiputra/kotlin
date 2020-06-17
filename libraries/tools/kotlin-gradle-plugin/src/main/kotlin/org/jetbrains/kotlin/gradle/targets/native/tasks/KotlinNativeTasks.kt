@@ -133,10 +133,10 @@ abstract class AbstractKotlinNativeCompile<T : KotlinCommonToolOptions, K : Abst
 
     // Inputs and outputs
     @get:InputFiles
-    val libraries: FileCollection by compilation.map {
+    val libraries: FileCollection by project.provider {
         // Avoid resolving these dependencies during task graph construction when we can't build the target:
-        if (it.konanTarget.enabledOnCurrentHost)
-            it.compileDependencyFiles.filterOutPublishableInteropLibs(project)
+        if (compilation.get().konanTarget.enabledOnCurrentHost)
+            compilation.get().compileDependencyFiles.filterOutPublishableInteropLibs(project)
         else project.files()
     }
 

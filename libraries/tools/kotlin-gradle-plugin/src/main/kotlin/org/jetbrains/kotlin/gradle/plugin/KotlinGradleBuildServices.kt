@@ -10,17 +10,10 @@ import org.gradle.BuildResult
 import org.gradle.api.Project
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.Logging
-import org.gradle.build.event.BuildEventsListenerRegistry
-import org.jetbrains.kotlin.compilerRunner.DELETED_SESSION_FILE_PREFIX
-import org.jetbrains.kotlin.compilerRunner.GradleCompilerRunner
 import org.jetbrains.kotlin.gradle.logging.kotlinDebug
 import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskExecutionResults
 import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskLoggers
 import org.jetbrains.kotlin.gradle.report.configureBuildReporter
-import org.jetbrains.kotlin.gradle.utils.relativeToRoot
-import org.jetbrains.kotlin.utils.addToStdlib.sumByLong
-import java.lang.management.ManagementFactory
-import kotlin.math.max
 import org.jetbrains.kotlin.gradle.utils.isGradleVersionAtLeast
 
 
@@ -67,7 +60,7 @@ internal class KotlinGradleBuildServices private constructor(
 
         @JvmStatic
         @Synchronized
-        fun getInstance(project: Project, buildEventsListenerRegistry: BuildEventsListenerRegistry): KotlinGradleBuildServices {
+        fun getInstance(project: Project, listenerRegistryHolder: BuildEventsListenerRegistryHolder): KotlinGradleBuildServices {
             val log = Logging.getLogger(KotlinGradleBuildServices::class.java)
             val kotlinGradleListenerProvider: org.gradle.api.provider.Provider<KotlinGradleBuildListener> = project.provider {
                 //TODO
@@ -81,12 +74,12 @@ internal class KotlinGradleBuildServices private constructor(
 
             val gradle = project.gradle
             val services = KotlinGradleBuildServices(gradle)
-            if (!isGradleVersionAtLeast(6,1)) {
+            if (isGradleVersionAtLeast(6, 1)) {
+                listenerRegistryHolder.listenerRegistry!!.onTaskCompletion(kotlinGradleListenerProvider)
+            } else {
                 gradle.addBuildListener(services)
                 instance = services
                 log.kotlinDebug(INIT_MESSAGE)
-            } else {
-                buildEventsListenerRegistry.onTaskCompletion(kotlinGradleListenerProvider)
             }
 
             services.buildStarted()

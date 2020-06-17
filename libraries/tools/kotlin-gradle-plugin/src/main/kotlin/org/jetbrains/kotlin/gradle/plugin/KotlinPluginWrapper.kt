@@ -45,8 +45,7 @@ import javax.inject.Inject
 import kotlin.reflect.KClass
 
 abstract class KotlinBasePluginWrapper(
-    protected val fileResolver: FileResolver,
-    protected val listenerRegistry: BuildEventsListenerRegistry
+    protected val fileResolver: FileResolver
 ) : Plugin<Project> {
 
     private val log = Logging.getLogger(this.javaClass)
@@ -58,7 +57,8 @@ abstract class KotlinBasePluginWrapper(
         DefaultKotlinSourceSetFactory(project, fileResolver)
 
     override fun apply(project: Project) {
-        val statisticsReporter = KotlinBuildStatsService.getOrCreateInstance(project, listenerRegistry)
+        val listenerRegistryHolder = BuildEventsListenerRegistryHolder.getInstance(project)
+        val statisticsReporter = KotlinBuildStatsService.getOrCreateInstance(project, listenerRegistryHolder)
         statisticsReporter?.report(StringMetrics.KOTLIN_COMPILER_VERSION, kotlinPluginVersion)
 
         checkGradleCompatibility()
@@ -77,7 +77,7 @@ abstract class KotlinBasePluginWrapper(
         // TODO: consider only set if if daemon or parallel compilation are enabled, though this way it should be safe too
         System.setProperty(org.jetbrains.kotlin.cli.common.KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY, "true")
 
-        val kotlinGradleBuildServices = KotlinGradleBuildServices.getInstance(project, listenerRegistry)
+        val kotlinGradleBuildServices = KotlinGradleBuildServices.getInstance(project, listenerRegistryHolder)
 
         kotlinGradleBuildServices.detectKotlinPluginLoadedInMultipleProjects(project, kotlinPluginVersion)
 
@@ -116,9 +116,8 @@ abstract class KotlinBasePluginWrapper(
 
 open class KotlinPluginWrapper @Inject constructor(
     fileResolver: FileResolver,
-    listenerRegistry: BuildEventsListenerRegistry,
     protected val registry: ToolingModelBuilderRegistry
-) : KotlinBasePluginWrapper(fileResolver, listenerRegistry) {
+) : KotlinBasePluginWrapper(fileResolver) {
     override fun getPlugin(project: Project, kotlinGradleBuildServices: KotlinGradleBuildServices): Plugin<Project> =
         KotlinPlugin(kotlinPluginVersion, registry)
 
@@ -128,9 +127,8 @@ open class KotlinPluginWrapper @Inject constructor(
 
 open class KotlinCommonPluginWrapper @Inject constructor(
     fileResolver: FileResolver,
-    listenerRegistry: BuildEventsListenerRegistry,
     protected val registry: ToolingModelBuilderRegistry
-) : KotlinBasePluginWrapper(fileResolver, listenerRegistry) {
+) : KotlinBasePluginWrapper(fileResolver) {
     override fun getPlugin(project: Project, kotlinGradleBuildServices: KotlinGradleBuildServices): Plugin<Project> =
         KotlinCommonPlugin(kotlinPluginVersion, registry)
 
@@ -140,9 +138,8 @@ open class KotlinCommonPluginWrapper @Inject constructor(
 
 open class KotlinAndroidPluginWrapper @Inject constructor(
     fileResolver: FileResolver,
-    listenerRegistry: BuildEventsListenerRegistry,
     protected val registry: ToolingModelBuilderRegistry
-) : KotlinBasePluginWrapper(fileResolver, listenerRegistry) {
+) : KotlinBasePluginWrapper(fileResolver) {
     override fun getPlugin(project: Project, kotlinGradleBuildServices: KotlinGradleBuildServices): Plugin<Project> =
         KotlinAndroidPlugin(kotlinPluginVersion, registry)
 
@@ -152,9 +149,8 @@ open class KotlinAndroidPluginWrapper @Inject constructor(
 
 open class Kotlin2JsPluginWrapper @Inject constructor(
     fileResolver: FileResolver,
-    listenerRegistry: BuildEventsListenerRegistry,
     protected val registry: ToolingModelBuilderRegistry
-) : KotlinBasePluginWrapper(fileResolver, listenerRegistry) {
+) : KotlinBasePluginWrapper(fileResolver) {
     override fun getPlugin(project: Project, kotlinGradleBuildServices: KotlinGradleBuildServices): Plugin<Project> =
         Kotlin2JsPlugin(kotlinPluginVersion, registry)
 
@@ -165,7 +161,7 @@ open class Kotlin2JsPluginWrapper @Inject constructor(
 open class KotlinJsPluginWrapper @Inject constructor(
     fileResolver: FileResolver,
     listenerRegistry: BuildEventsListenerRegistry
-) : KotlinBasePluginWrapper(fileResolver, listenerRegistry) {
+) : KotlinBasePluginWrapper(fileResolver) {
     override fun getPlugin(project: Project, kotlinGradleBuildServices: KotlinGradleBuildServices): Plugin<Project> =
         KotlinJsPlugin(kotlinPluginVersion)
 
@@ -177,9 +173,8 @@ open class KotlinJsPluginWrapper @Inject constructor(
 
 open class KotlinMultiplatformPluginWrapper @Inject constructor(
     fileResolver: FileResolver,
-    listenerRegistry: BuildEventsListenerRegistry,
     private val featurePreviews: FeaturePreviews
-) : KotlinBasePluginWrapper(fileResolver, listenerRegistry) {
+) : KotlinBasePluginWrapper(fileResolver) {
     override fun getPlugin(project: Project, kotlinGradleBuildServices: KotlinGradleBuildServices): Plugin<Project> =
         KotlinMultiplatformPlugin(
             kotlinPluginVersion,

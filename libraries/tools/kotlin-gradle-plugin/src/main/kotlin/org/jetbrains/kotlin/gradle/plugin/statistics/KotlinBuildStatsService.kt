@@ -8,11 +8,10 @@ package org.jetbrains.kotlin.gradle.plugin.statistics
 import org.gradle.BuildAdapter
 import org.gradle.BuildResult
 import org.gradle.api.Project
-import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.invocation.Gradle
-import org.gradle.build.event.BuildEventsListenerRegistry
 import org.gradle.initialization.BuildRequestMetaData
 import org.gradle.invocation.DefaultGradle
+import org.jetbrains.kotlin.gradle.plugin.BuildEventsListenerRegistryHolder
 import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinBuildStatHandler.Companion.getLogger
 import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinBuildStatHandler.Companion.runSafe
 import org.jetbrains.kotlin.gradle.utils.*
@@ -27,7 +26,6 @@ import java.lang.management.ManagementFactory
 import javax.management.MBeanServer
 import javax.management.ObjectName
 import javax.management.StandardMBean
-import kotlin.system.measureTimeMillis
 
 /**
  * Interface for populating statistics collection method via JXM interface
@@ -86,7 +84,7 @@ internal abstract class KotlinBuildStatsService internal constructor() : BuildAd
          */
         @JvmStatic
         @Synchronized
-        internal fun getOrCreateInstance(project: Project, buildEventsListenerRegistry: BuildEventsListenerRegistry): IStatisticsValuesConsumer? {
+        internal fun getOrCreateInstance(project: Project, listenerRegistryHolder: BuildEventsListenerRegistryHolder): IStatisticsValuesConsumer? {
 
             return runSafe("${KotlinBuildStatsService::class.java}.getOrCreateInstance") {
                 val gradle = project.gradle
@@ -111,7 +109,7 @@ internal abstract class KotlinBuildStatsService internal constructor() : BuildAd
                             val newInstance = DefaultKotlinBuildStatsService(gradle, beanName)
 
                             if (isGradleVersionAtLeast(6,1)) {
-                                buildEventsListenerRegistry.onTaskCompletion(kotlinBuildStatProvider)
+                                listenerRegistryHolder.listenerRegistry!!.onTaskCompletion(kotlinBuildStatProvider)
                             }
 
                             instance = newInstance
