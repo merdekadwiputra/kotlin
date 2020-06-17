@@ -9,13 +9,33 @@ import org.gradle.api.invocation.Gradle
 import org.gradle.tooling.events.FinishEvent
 import org.gradle.tooling.events.OperationCompletionListener
 import org.jetbrains.kotlin.statistics.BuildSessionLogger
+import org.jetbrains.kotlin.statistics.metrics.NumericalMetrics
+import java.lang.management.ManagementFactory
+import javax.management.MBeanServer
 import javax.management.ObjectName
 
 open class KotlinBuildStatListener(val gradle: Gradle, val beanName: ObjectName) : OperationCompletionListener {
-    private val sessionLogger = BuildSessionLogger(gradle.gradleUserHomeDir)
 
     override fun onFinish(event: FinishEvent?) {
-        //todo is it any chamce to get failure exception?
-        KotlinBuildStatHandler().buildFinished(gradle, beanName, sessionLogger, event?.descriptor?.name, null)
+        //todo is it any chance to get failure exception?
+        KotlinBuildStatHandler.runSafe("${KotlinBuildStatHandler::class.java}.buildFinished") {
+            //TODO store metrics
+//            try {
+//                val endTime = event?.result?.endTime
+//                try {
+//                    if (gradle != null) reportGlobalMetrics(gradle, sessionLogger)
+//                } finally {
+//                    report(NumericalMetrics.GRADLE_BUILD_DURATION, finishTime - it.buildStartedTime)
+//                    report(NumericalMetrics.GRADLE_EXECUTION_DURATION, finishTime - it.projectEvaluatedTime)
+//                    report(NumericalMetrics.BUILD_FINISH_TIME, finishTime)
+//                }
+//            } finally {
+//                val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
+//                if (mbs.isRegistered(beanName)) {
+//                    mbs.unregisterMBean(beanName)
+//                }
+//            }
+        }
+
     }
 }
