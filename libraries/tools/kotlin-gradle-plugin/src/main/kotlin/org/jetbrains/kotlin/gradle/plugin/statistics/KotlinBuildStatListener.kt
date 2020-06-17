@@ -14,7 +14,7 @@ import java.lang.management.ManagementFactory
 import javax.management.MBeanServer
 import javax.management.ObjectName
 
-open class KotlinBuildStatListener(val gradle: Gradle, val beanName: ObjectName) : OperationCompletionListener {
+open class KotlinBuildStatListener(val beanName: ObjectName) : OperationCompletionListener {
 
     override fun onFinish(event: FinishEvent?) {
         //todo is it any chance to get failure exception?
