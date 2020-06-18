@@ -111,6 +111,7 @@ private fun Collection<File>.filterKlibsPassedToCompiler(project: Project) = fil
 abstract class AbstractKotlinNativeCompile<T : KotlinCommonToolOptions, K : AbstractKotlinNativeCompilation> : AbstractCompile() {
 
     init {
+//        System.out.println("NPE bug: init compilation $compilation")
         sourceCompatibility = "1.6"
         targetCompatibility = "1.6"
     }
@@ -146,7 +147,7 @@ abstract class AbstractKotlinNativeCompile<T : KotlinCommonToolOptions, K : Abst
     }
 
     @get:Input
-    val target: String by compilation.map { it.konanTarget.name }
+    val target: String by project.provider { compilation.get().konanTarget.name }
 
     // region Compiler options.
     @get:Internal
@@ -168,7 +169,8 @@ abstract class AbstractKotlinNativeCompile<T : KotlinCommonToolOptions, K : Abst
     // endregion.
 
     @get:Input
-    val enableEndorsedLibs by compilation.map { it.enableEndorsedLibs }
+    val enableEndorsedLibs by
+    project.provider { compilation.map { it.enableEndorsedLibs }.get() }
 
     val kotlinNativeVersion: String
         @Input get() = project.konanVersion.toString()
@@ -317,7 +319,8 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
     KotlinCompile<KotlinCommonOptions> {
     @Internal
     @Transient // can't be serialized for Gradle configuration avoidance
-    final override val compilation: Property<AbstractKotlinNativeCompilation> = project.newPropertyInit()
+    final override val compilation: Property<AbstractKotlinNativeCompilation> =
+        project.newProperty()
 
     @get:Input
     override val outputKind = LIBRARY
@@ -330,7 +333,7 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
 
     @get:Internal
     override val baseName: String by
-    compilation.map {if (it.isMain()) project.name else "${project.name}_${name}"}
+    compilation.map { if (it.isMain()) project.name else "${project.name}_${name}" }
 
     // Store as an explicit provider in order to allow Gradle Instant Execution to capture the state
     private val allSourceProvider = compilation.map { project.files(it.allSources).asFileTree }
@@ -457,7 +460,7 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
 
     @get:Internal
     @Transient // can't be serialized for Gradle configuration avoidance
-    final override val compilation: Provider<KotlinNativeCompilation> = project.provider { binary.compilation }
+    final override val compilation: Property<KotlinNativeCompilation> = project.newProperty()
 
     init {
         @Suppress("LeakingThis")
@@ -468,8 +471,9 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
     @Transient
     lateinit var binary: NativeBinary
 
-    @get:Internal // Taken into account by getSources().
-    val intermediateLibrary: File by compilation.map { it.compileKotlinTask.outputFile }.get()
+     // Taken into account by getSources().
+    val intermediateLibrary: File
+    @Internal get() = compilation.get().compileKotlinTask.outputFile.get()
 
     // explicitly store the provider in order for Gradle Instant Execution to capture the state
     private val sourceProvider = compilation.map { compilationInstance ->
@@ -496,23 +500,17 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
         binary.outputDirectory = destinationDir
     }
 
-    @get:Input
-    override val outputKind: CompilerOutputKind by project.provider {
-        binary.outputKind.compilerOutputKind
-    }
+    override val outputKind: CompilerOutputKind
+        @Input get() = binary.outputKind.compilerOutputKind
 
-    @get:Input
-    override val optimized: Boolean by project.provider {
-        binary.optimized
-    }
+    override val optimized: Boolean
+        @Input get() = binary.optimized
 
-    @get:Input
-    override val debuggable: Boolean by project.provider {
-        binary.debuggable
-    }
+    override val debuggable: Boolean
+        @Input get() = binary.debuggable
 
-    @get:Internal
-    override val baseName by project.provider { binary.baseName }
+    override val baseName: String
+        @Input get() = binary.baseName
 
     @get:Input
     protected val konanCacheKind: NativeCacheKind
@@ -566,32 +564,25 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
     // endregion.
 
     // Binary-specific options.
-    @get:Optional
-    @get:Input
-    val entryPoint: String? by project.provider {
-        (binary as? Executable)?.entryPoint
-    }
+    val entryPoint: String?
+        @Input
+        @Optional
+        get() = (binary as? Executable)?.entryPoint
 
-    @get:Input
-    val linkerOpts: List<String> by project.provider {
-        binary.linkerOpts
-    }
+    val linkerOpts: List<String>
+        @Input get() = binary.linkerOpts
 
-    @get:Input
-    val processTests: Boolean by project.provider {
-        binary is TestExecutable
-    }
+    val processTests: Boolean
+        @Input get() = binary is TestExecutable
 
-    @get:InputFiles
-    val exportLibraries: FileCollection by project.provider {
-        binary.let {
+    val exportLibraries: FileCollection
+    @InputFile get() = binary.let {
             if (it is AbstractNativeLibrary) {
                 project.configurations.getByName(it.exportConfigurationName)
             } else {
                 project.files()
             }
         }
-    }
 
     @get:Input
     val isStaticFramework: Boolean by project.provider {
@@ -646,16 +637,20 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
         }
     }
 
-    private val friendCompilations = compilation.map { it.associateWithTransitiveClosure.toList() }
+    private val friendCompilations
+            get() = compilation.map { it.associateWithTransitiveClosure.toList() }
 
-    private val friendFiles: FileCollection = project.files(
-        friendCompilations.get().map { friendCompilation -> friendCompilation.output.allOutputs },
-        compilation.map { it.friendArtifacts }
-    )
+    private val friendFiles: FileCollection
+        get() = project.files(
+            friendCompilations.get().map { friendCompilation -> friendCompilation.output.allOutputs },
+            compilation.map { it.friendArtifacts }
+        )
 
-    private val allSourcesProvider = compilation.map { it.allSources }
+    private val allSourcesProvider
+            get() = compilation.map { it.allSources }
 
-    private val commonSourcesProvider = compilation.map { it.commonSources }
+    private val commonSourcesProvider
+            get() = compilation.map { it.commonSources }
 
 
 //    val friendFiles = friendCompilations.map {

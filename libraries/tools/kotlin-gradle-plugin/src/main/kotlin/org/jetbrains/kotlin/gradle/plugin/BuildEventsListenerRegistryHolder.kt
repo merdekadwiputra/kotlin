@@ -8,12 +8,13 @@ package org.jetbrains.kotlin.gradle.plugin
 import org.gradle.api.Project
 import org.gradle.build.event.BuildEventsListenerRegistry
 import org.jetbrains.kotlin.gradle.utils.isGradleVersionAtLeast
+import javax.inject.Inject
 
-class BuildEventsListenerRegistryHolder(val listenerRegistry: BuildEventsListenerRegistry?) {
+open class BuildEventsListenerRegistryHolder @Inject constructor(val listenerRegistry: BuildEventsListenerRegistry?) {
     companion object {
         fun getInstance(project: Project) = run {
             if (isGradleVersionAtLeast(6, 1)) {
-                BuildEventsListenerRegistryHolder(project.objects.newInstance(BuildEventsListenerRegistry::class.java))
+                project.objects.newInstance(BuildEventsListenerRegistryHolder::class.java)
             } else {
                 BuildEventsListenerRegistryHolder(null)
             }

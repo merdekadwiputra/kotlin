@@ -119,6 +119,7 @@ open class KotlinNativeTargetConfigurator<T : KotlinNativeTarget>(
             KotlinNativeLink::class.java
         ).apply {
             val target = binary.target
+            compilation.set(binary.compilation)
             this.binary = binary
             group = BasePlugin.BUILD_GROUP
             description = "Links ${binary.outputKind.description} '${binary.name}' for a target '${target.name}'."
