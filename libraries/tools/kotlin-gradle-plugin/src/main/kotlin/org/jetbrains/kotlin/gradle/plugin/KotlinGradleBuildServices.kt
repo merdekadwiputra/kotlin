@@ -63,8 +63,7 @@ internal class KotlinGradleBuildServices private constructor(
         fun getInstance(project: Project, listenerRegistryHolder: BuildEventsListenerRegistryHolder): KotlinGradleBuildServices {
             val log = Logging.getLogger(KotlinGradleBuildServices::class.java)
             val kotlinGradleListenerProvider: org.gradle.api.provider.Provider<KotlinGradleBuildListener> = project.provider {
-                //TODO
-                KotlinGradleBuildListener(KotlinGradleFinishBuildHandler())
+                KotlinGradleBuildListener(project.gradle, KotlinGradleFinishBuildHandler())
             }
 
             if (instance != null) {

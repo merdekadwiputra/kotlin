@@ -12,18 +12,16 @@ import java.util.*
 import kotlin.math.max
 
 class KotlinBuildReporterHandler {
-    companion object {
-        internal val kotlinTaskTimeNs = HashMap<Task, Long>()
-        internal val tasksSb = StringBuilder()
-
-        @Volatile
-        internal var allTasksTimeNs: Long = 0L
-    }
-
-    fun buildFinished(gradle: Gradle, perfReportFile: File, failure: Throwable?) {
+   fun buildFinished(
+        gradle: Gradle,
+        perfReportFile: File,
+        kotlinTaskTimeNs: Map<String, Long>,
+        allTasksTimeNs: Long,
+        failure: Throwable? = null
+    ) {
         val logger = gradle.rootProject.logger
         try {
-            perfReportFile.writeText(buildInfo(gradle, failure) + taskOverview() + tasksSb.toString())
+            perfReportFile.writeText(buildInfo(gradle, failure) + taskOverview(kotlinTaskTimeNs, allTasksTimeNs))
             logger.lifecycle("Kotlin build report is written to ${perfReportFile.canonicalPath}")
         } catch (e: Throwable) {
             logger.error("Could not write Kotlin build report to ${perfReportFile.canonicalPath}", e)
@@ -52,7 +50,7 @@ class KotlinBuildReporterHandler {
         }
     }
 
-    internal fun taskOverview(): String {
+    internal fun taskOverview(kotlinTaskTimeNs: Map<String, Long>, allTasksTimeNs: Long): String {
         if (kotlinTaskTimeNs.isEmpty()) return buildString { appendln("No Kotlin task was run") }
 
         val sb = StringBuilder()
@@ -64,9 +62,9 @@ class KotlinBuildReporterHandler {
         val table = TextTable("Time", "% of Kotlin time", "Task")
         kotlinTaskTimeNs.entries
             .sortedByDescending { (_, timeNs) -> timeNs }
-            .forEach { (task, timeNs) ->
+            .forEach { (taskPath, timeNs) ->
                 val percent = (timeNs.toDouble() / kotlinTotalTimeNs * 100).asString(1)
-                table.addRow(formatTime(timeNs), "$percent %", task.path)
+                table.addRow(formatTime(timeNs), "$percent %", taskPath)
             }
         table.printTo(sb)
         sb.appendln()
@@ -81,7 +79,7 @@ class KotlinBuildReporterHandler {
     private fun Double.asString(decPoints: Int): String =
         String.format("%.${decPoints}f", this)
 
-    private class TextTable(vararg columnNames: String) {
+    internal class TextTable(vararg columnNames: String) {
         private val rows = ArrayList<List<String>>()
         private val columnsCount = columnNames.size
         private val maxLengths = IntArray(columnsCount) { columnNames[it].length }

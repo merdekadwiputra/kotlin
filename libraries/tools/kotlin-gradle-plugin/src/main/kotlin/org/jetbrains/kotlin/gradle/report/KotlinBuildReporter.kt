@@ -16,9 +16,6 @@ import org.gradle.api.tasks.TaskState
 import org.jetbrains.kotlin.gradle.logging.kotlinDebug
 import org.jetbrains.kotlin.gradle.plugin.PropertiesProvider
 import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskExecutionResults
-import org.jetbrains.kotlin.gradle.report.KotlinBuildReporterHandler.Companion.allTasksTimeNs
-import org.jetbrains.kotlin.gradle.report.KotlinBuildReporterHandler.Companion.kotlinTaskTimeNs
-import org.jetbrains.kotlin.gradle.report.KotlinBuildReporterHandler.Companion.tasksSb
 import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
 import java.io.File
 import java.text.SimpleDateFormat
@@ -67,6 +64,11 @@ internal class KotlinBuildReporter(
     }
 
     private val taskStartNs = HashMap<Task, Long>()
+    private val kotlinTaskTimeNs = HashMap<Task, Long>()
+    private val tasksSb = StringBuilder()
+
+    @Volatile
+    private var allTasksTimeNs: Long = 0L
 
     @Synchronized
     override fun beforeExecute(task: Task) {
@@ -109,7 +111,7 @@ internal class KotlinBuildReporter(
 
     @Synchronized
     override fun buildFinished(result: BuildResult) {
-        KotlinBuildReporterHandler().buildFinished(gradle, perfReportFile, result.failure)
+        KotlinBuildReporterHandler().buildFinished(gradle, perfReportFile, kotlinTaskTimeNs.mapKeys{it.key.path}, allTasksTimeNs, result.failure)
     }
 }
 

@@ -164,11 +164,11 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     protected val multiModuleICSettings: MultiModuleICSettings
         get() = MultiModuleICSettings(taskData.buildHistoryFile, useModuleDetection)
 
-    @get:Classpath
-    @get:InputFiles
-    val pluginClasspath: FileCollection by project.provider {
-        project.configurations.getByName(PLUGIN_CLASSPATH_CONFIGURATION_NAME)
-    }
+    @get:Internal
+    private val pluginConfigurationProvider = project.provider {project.configurations.getByName(PLUGIN_CLASSPATH_CONFIGURATION_NAME)}
+
+    val pluginClasspath: FileCollection
+    @Classpath @InputFiles get() = pluginConfigurationProvider.get()
 
     @get:Internal
     internal val pluginOptions = CompilerPluginOptions()
@@ -199,8 +199,7 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         sourceFilesExtensionsSources.add(extensions)
     }
 
-    private val kotlinExt: KotlinProjectExtension
-        get() = project.extensions.findByType(KotlinProjectExtension::class.java)!!
+    private val kotlinExtProvider: Provider<KotlinProjectExtension> = project.provider {project.extensions.findByType(KotlinProjectExtension::class.java)!!}
 
     override fun getDestinationDir(): File =
         taskData.destinationDir.get()
@@ -225,8 +224,8 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         get() = coroutines.name
 
     @get:Internal
-    internal val coroutines: Coroutines by project.provider {
-        kotlinExt.experimental.coroutines
+    internal val coroutines: Coroutines by kotlinExtProvider.map {
+        it.experimental.coroutines
             ?: coroutinesFromGradleProperties
             ?: Coroutines.DEFAULT
     }
@@ -298,6 +297,9 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         return !inputs.isIncremental && getSourceRoots().kotlinSourceFiles.isEmpty()
     }
 
+    @get:Internal
+    private val projectDirProvider = project.provider {project.rootProject.projectDir}
+
     private fun executeImpl(inputs: IncrementalTaskInputs) {
         // Check that the JDK tools are available in Gradle (fail-fast, instead of a fail during the compiler run):
         findToolsJar()
@@ -305,7 +307,7 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         val sourceRoots = getSourceRoots()
         val allKotlinSources = sourceRoots.kotlinSourceFiles
 
-        logger.kotlinDebug { "All kotlin sources: ${allKotlinSources.pathsAsStringRelativeTo(project.rootProject.projectDir)}" }
+        logger.kotlinDebug { "All kotlin sources: ${allKotlinSources.pathsAsStringRelativeTo(projectDirProvider.get())}" }
 
         if (skipCondition(inputs)) {
             // Skip running only if non-incremental run. Otherwise, we may need to do some cleanup.

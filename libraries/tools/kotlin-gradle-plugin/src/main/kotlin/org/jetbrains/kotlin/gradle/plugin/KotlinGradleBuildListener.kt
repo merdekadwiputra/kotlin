@@ -11,12 +11,12 @@ import org.gradle.tooling.events.OperationCompletionListener
 
 //Available since Gradle 6.1
 class KotlinGradleBuildListener(
+    val gradle: Gradle,
     val services: KotlinGradleFinishBuildHandler
 ) : OperationCompletionListener {
 
     override fun onFinish(event: FinishEvent) {
-        //TODO
-//        services.buildFinished(gradle)
+     services.buildFinished(gradle)
     }
 
 }

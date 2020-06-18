@@ -68,7 +68,7 @@ class KotlinBuildStatHandler {
         }
     }
 
-    private fun reportGlobalMetrics(gradle: Gradle, sessionLogger: BuildSessionLogger) {
+    internal fun reportGlobalMetrics(gradle: Gradle, sessionLogger: BuildSessionLogger) {
         System.getProperty("os.name")?.also {
             sessionLogger.report(StringMetrics.OS_TYPE, System.getProperty("os.name"))
         }
