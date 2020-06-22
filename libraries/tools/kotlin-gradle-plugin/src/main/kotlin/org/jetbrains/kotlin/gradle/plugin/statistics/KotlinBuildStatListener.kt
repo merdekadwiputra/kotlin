@@ -14,7 +14,7 @@ import java.lang.management.ManagementFactory
 import javax.management.MBeanServer
 import javax.management.ObjectName
 
-open class KotlinBuildStatListener(val beanName: ObjectName, val gradle: Gradle) : OperationCompletionListener, AutoCloseable {
+open class KotlinBuildStatListener(val beanName: ObjectName/*, val gradle: Gradle*/) : OperationCompletionListener, AutoCloseable {
 
     private var projectEvaluatedTime: Long? = null
 

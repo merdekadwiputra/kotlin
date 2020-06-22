@@ -53,7 +53,7 @@ internal open class AbstractKotlinCompileArgumentsContributor<T : CommonCompiler
         args: T,
         flags: Collection<CompilerArgumentsConfigurationFlag>
     ) {
-        args.coroutinesState = when (coroutines) {
+        args.coroutinesState = when (coroutines.get()) {
             Coroutines.ENABLE -> CommonCompilerArguments.ENABLE
             Coroutines.WARN -> CommonCompilerArguments.WARN
             Coroutines.ERROR -> CommonCompilerArguments.ERROR

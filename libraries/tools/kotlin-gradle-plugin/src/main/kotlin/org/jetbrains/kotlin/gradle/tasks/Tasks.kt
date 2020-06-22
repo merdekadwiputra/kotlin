@@ -127,7 +127,10 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         File(File(project.buildDir, KOTLIN_BUILD_DIR_NAME), name)
     }
 
-    override fun localStateDirectories(): FileCollection = project.files(taskBuildDirectory)
+    @get:LocalState
+    internal val localStateDirectoriesProvider: FileCollection by project.provider{ project.files(taskBuildDirectory) }
+
+    override fun localStateDirectories(): FileCollection = localStateDirectoriesProvider
 
     // indicates that task should compile kotlin incrementally if possible
     // it's not possible when IncrementalTaskInputs#isIncremental returns false (i.e first build)
@@ -199,7 +202,8 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         sourceFilesExtensionsSources.add(extensions)
     }
 
-    private val kotlinExtProvider: Provider<KotlinProjectExtension> = project.provider {project.extensions.findByType(KotlinProjectExtension::class.java)!!}
+    @get:Internal
+    internal val kotlinExtProvider: Provider<KotlinProjectExtension> = project.provider {project.extensions.findByType(KotlinProjectExtension::class.java)!!}
 
     override fun getDestinationDir(): File =
         taskData.destinationDir.get()
@@ -219,12 +223,12 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     @get:Internal
     internal var coroutinesFromGradleProperties: Coroutines? = null
     // Input is needed to force rebuild even if source files are not changed
-    @get:Input
-    internal val coroutinesStr: String
-        get() = coroutines.name
 
-    @get:Internal
-    internal val coroutines: Coroutines by kotlinExtProvider.map {
+    @get:Input
+    internal val coroutinesStr: Provider<String> = project.provider {coroutines.get().name}
+
+    @get:Input
+    internal val coroutines: Provider<Coroutines> = kotlinExtProvider.map {
         it.experimental.coroutines
             ?: coroutinesFromGradleProperties
             ?: Coroutines.DEFAULT
@@ -243,7 +247,7 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
 
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
-    internal var commonSourceSet: FileCollection = project.files()
+    internal var commonSourceSet: FileCollection = project.files() //TODO
 
     @get:Input
     internal val moduleName: String by project.provider {
@@ -298,7 +302,7 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     }
 
     @get:Internal
-    private val projectDirProvider = project.provider {project.rootProject.projectDir}
+    private val projectDirProvider = project.provider { project.rootProject.projectDir }
 
     private fun executeImpl(inputs: IncrementalTaskInputs) {
         // Check that the JDK tools are available in Gradle (fail-fast, instead of a fail during the compiler run):
@@ -330,13 +334,16 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
      */
     internal abstract fun callCompilerAsync(args: T, sourceRoots: SourceRoots, changedFiles: ChangedFiles)
 
-    @get:Internal
+    @get:Input
     internal val isMultiplatform: Boolean by project.provider {
         project.plugins.any { it is KotlinPlatformPluginBase || it is KotlinMultiplatformPluginWrapper }
     }
 
+    @get:Internal
+    internal val abstractKotlinCompileArgumentsContributorby by project.provider {AbstractKotlinCompileArgumentsContributor(thisTaskProvider)}
+
     override fun setupCompilerArgs(args: T, defaultsOnly: Boolean, ignoreClasspathResolutionErrors: Boolean) {
-        AbstractKotlinCompileArgumentsContributor(thisTaskProvider).contributeArguments(
+        abstractKotlinCompileArgumentsContributorby.contributeArguments(
             args,
             compilerArgumentsConfigurationFlags(defaultsOnly, ignoreClasspathResolutionErrors)
         )
@@ -610,6 +617,9 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
             JsLibraryUtils::isKotlinJavascriptLibrary
         }
 
+    @get:Internal
+    private val absolutePathProvider = project.provider {project.projectDir.absolutePath}
+
     override fun callCompilerAsync(args: K2JSCompilerArguments, sourceRoots: SourceRoots, changedFiles: ChangedFiles) {
         sourceRoots as SourceRoots.KotlinOnly
 
@@ -633,7 +643,7 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
         args.friendModules = friendDependencies.joinToString(File.pathSeparator)
 
         if (args.sourceMapBaseDirs == null && !args.sourceMapPrefix.isNullOrEmpty()) {
-            args.sourceMapBaseDirs = project.projectDir.absolutePath
+            args.sourceMapBaseDirs = absolutePathProvider.get()
         }
 
         logger.kotlinDebug("compiling with args ${ArgumentUtils.convertArgumentsToStringList(args)}")
