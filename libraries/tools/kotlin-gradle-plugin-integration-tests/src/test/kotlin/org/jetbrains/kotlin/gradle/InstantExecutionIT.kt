@@ -151,7 +151,17 @@ class InstantExecutionIT : BaseGradleIT() {
     fun testInstantExecution() {
         val project = Project("instantExecution")
 
-        project.build("build", "-Dorg.gradle.unsafe.instant-execution=true") {
+        //first run without cache
+        project.build("assemble") {
+            assertSuccessful()
+            assertTasksExecuted(
+                ":compileKotlin",
+                ":compileTestKotlin"
+            )
+        }
+
+        //second run should use cache
+        project.build("assemble") {
             assertSuccessful()
             assertTasksExecuted(
                 ":compileKotlin",
@@ -165,7 +175,19 @@ class InstantExecutionIT : BaseGradleIT() {
     fun testInstantExecutionForJs() {
         val project = Project("instantExecutionToJs")
 
-        project.build("build", "-Dorg.gradle.unsafe.instant-execution=true") {
+        project.build("assemble") {
+            assertSuccessful()
+
+            assertTasksExecuted(
+                ":compileKotlin2Js",
+                ":compileTestKotlin2Js"
+            )
+
+            assertFileExists("build/kotlin2js/main/module.js")
+            assertFileExists("build/kotlin2js/test/module-tests.js")
+        }
+
+        project.build("assemble") {
             assertSuccessful()
 
             assertTasksExecuted(
