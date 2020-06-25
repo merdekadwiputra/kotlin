@@ -203,7 +203,8 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     }
 
     @get:Internal
-    internal val kotlinExtProvider: Provider<KotlinProjectExtension> = project.provider {project.extensions.findByType(KotlinProjectExtension::class.java)!!}
+    internal val kotlinExtProvider: KotlinProjectExtension
+        get() = project.extensions.findByType(KotlinProjectExtension::class.java)!!
 
     override fun getDestinationDir(): File =
         taskData.destinationDir.get()
@@ -228,8 +229,8 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     internal val coroutinesStr: Provider<String> = project.provider {coroutines.get().name}
 
     @get:Input
-    internal val coroutines: Provider<Coroutines> = kotlinExtProvider.map {
-        it.experimental.coroutines
+    internal val coroutines: Provider<Coroutines> = project.provider {
+        kotlinExtProvider.experimental.coroutines
             ?: coroutinesFromGradleProperties
             ?: Coroutines.DEFAULT
     }

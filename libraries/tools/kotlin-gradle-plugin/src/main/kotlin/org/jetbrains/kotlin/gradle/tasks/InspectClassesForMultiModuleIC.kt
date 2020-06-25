@@ -30,23 +30,25 @@ internal open class InspectClassesForMultiModuleIC : DefaultTask() {
         (project.kotlinExtension as KotlinSingleJavaTargetExtension).target.defaultArtifactClassesListFile.get()
     }
 
-    @get:Internal
-    internal val sourceSet = project.provider {
-        project.convention.findPlugin(JavaPluginConvention::class.java)?.sourceSets?.findByName(sourceSetName)
-    }
+    @get:Input
+    internal val sourceSet
+        get() = project.convention.findPlugin(JavaPluginConvention::class.java)?.sourceSets?.findByName(sourceSetName)
 
     @get:Internal
-    internal val fileTrees = sourceSet.map{ it?.output?.classesDirs?.map { project.objects.fileTree().from(it).include("**/*.class") }}
+    internal val fileTrees = project.provider{ sourceSet?.output?.classesDirs?.map { project.objects.fileTree().from(it).include("**/*.class") }}
+
+    @get:Internal
+    internal val objects = project.objects
 
     @Suppress("MemberVisibilityCanBePrivate")
     @get:InputFiles
     internal val classFiles: FileCollection
         get() {
-            if (sourceSet.isPresent) {
-                val fileTrees = sourceSet.get()!!.output.classesDirs.map { project.objects.fileTree().from(it).include("**/*.class") }
-                return project.objects.fileCollection().from(fileTrees)
+            if (sourceSet != null) {
+                val fileTrees = sourceSet!!.output.classesDirs.map { objects.fileTree().from(it).include("**/*.class") }
+                return objects.fileCollection().from(fileTrees)
             }
-            return project.objects.fileCollection()
+            return objects.fileCollection()
         }
 
     @TaskAction
