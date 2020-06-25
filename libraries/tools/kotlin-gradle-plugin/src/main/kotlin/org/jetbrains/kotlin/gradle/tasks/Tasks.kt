@@ -121,14 +121,20 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         cacheOnlyIfEnabledForKotlin()
     }
 
+    @get:Internal
+    internal val buildDir = project.buildDir
+
     // avoid creating directory in getter: this can lead to failure in parallel build
     @get:LocalState
     internal val taskBuildDirectory: File by project.provider {
-        File(File(project.buildDir, KOTLIN_BUILD_DIR_NAME), name)
+        File(File(buildDir, KOTLIN_BUILD_DIR_NAME), name)
     }
 
+    @get:Internal
+    internal val projectObjects = project.objects
+
     @get:LocalState
-    internal val localStateDirectoriesProvider: FileCollection by project.provider{ project.files(taskBuildDirectory) }
+    internal val localStateDirectoriesProvider: FileCollection = projectObjects.fileCollection().from(taskBuildDirectory)
 
     override fun localStateDirectories(): FileCollection = localStateDirectoriesProvider
 
@@ -180,10 +186,13 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     @get:InputFiles
     protected val additionalClasspath = arrayListOf<File>()
 
+    @get:Internal
+    internal val objects = project.objects
+
     // Store this file collection before it is filtered by File::exists to ensure that Gradle Instant execution doesn't serialize the
     // filtered files, losing those that don't exist yet and will only be created during build
     private val compileClasspathImpl by project.provider {
-        classpath + project.files(additionalClasspath)
+        classpath + objects.fileCollection().from(additionalClasspath)
     }
 
     @get:Internal // classpath already participates in the checks
@@ -341,10 +350,10 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     }
 
     @get:Internal
-    internal val abstractKotlinCompileArgumentsContributorby by project.provider {AbstractKotlinCompileArgumentsContributor(thisTaskProvider)}
+    internal val abstractKotlinCompileArgumentsContributor by project.provider { AbstractKotlinCompileArgumentsContributor(thisTaskProvider) }
 
     override fun setupCompilerArgs(args: T, defaultsOnly: Boolean, ignoreClasspathResolutionErrors: Boolean) {
-        abstractKotlinCompileArgumentsContributorby.contributeArguments(
+        abstractKotlinCompileArgumentsContributor.contributeArguments(
             args,
             compilerArgumentsConfigurationFlags(defaultsOnly, ignoreClasspathResolutionErrors)
         )
