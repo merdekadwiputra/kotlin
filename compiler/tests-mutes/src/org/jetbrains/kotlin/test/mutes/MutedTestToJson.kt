@@ -8,7 +8,7 @@ package org.jetbrains.kotlin.test.mutes
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
-internal val objectMapper = jacksonObjectMapper()
+internal val jsonObjectMapper = jacksonObjectMapper()
 
 data class MuteTestJson(
     val id: Int,
@@ -17,10 +17,6 @@ data class MuteTestJson(
     val target: JsonNode,
     val resolution: JsonNode
 )
-
-internal fun MuteTestJson.getTests(): List<String> {
-    return target.get("tests").get("test").toList().map { it.get("name").textValue() }
-}
 
 internal fun createMuteTestJson(testName: String, description: String, scope: Scope): MuteTestJson {
     val assignmentJson = """{ "text" : "$TAG $description" }"""
@@ -33,9 +29,9 @@ internal fun createMuteTestJson(testName: String, description: String, scope: Sc
 
     return MuteTestJson(
         0,
-        objectMapper.readTree(assignmentJson),
-        objectMapper.readTree(scopeJson),
-        objectMapper.readTree(targetJson),
-        objectMapper.readTree(resolutionJson)
+        jsonObjectMapper.readTree(assignmentJson),
+        jsonObjectMapper.readTree(scopeJson),
+        jsonObjectMapper.readTree(targetJson),
+        jsonObjectMapper.readTree(resolutionJson)
     )
 }

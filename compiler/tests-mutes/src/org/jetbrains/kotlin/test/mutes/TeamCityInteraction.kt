@@ -1,13 +1,14 @@
 package org.jetbrains.kotlin.test.mutes
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.treeToValue
 import khttp.responses.Response
 import khttp.structures.authorization.Authorization
 
 internal const val TAG = "[MUTED-BY-CSVFILE]"
+private val buildServerUrl = System.getProperty("org.jetbrains.kotlin.test.mutes.teamcity.server.url")
 private val headers = mapOf("Content-type" to "application/json", "Accept" to "application/json")
 private val authUser = object : Authorization {
-    override val header = "Authorization" to "Bearer ${System.getProperty("org.jetbrains.kotlin.test.mutes.buildserver.token")}"
+    override val header = "Authorization" to "Bearer ${System.getProperty("org.jetbrains.kotlin.test.mutes.teamcity.server.token")}"
 }
 
 
@@ -19,21 +20,21 @@ internal fun getMutedTestsOnTeamcityForRootProject(): List<MuteTestJson> {
         "fields" to "mute(id,assignment(text),scope(project(id),buildTypes(buildType(id))),target(tests(test(name))),resolution)"
     )
 
-    val response = khttp.get("https://buildserver.labs.intellij.net/app/rest/mutes", headers, params, auth = authUser)
+    val response = khttp.get("$buildServerUrl/app/rest/mutes", headers, params, auth = authUser)
     checkResponseAndLog(response)
 
-    val alreadyMutedTestsOnTeamCity = objectMapper.readTree(response.text).get("mute")
+    val alreadyMutedTestsOnTeamCity = jsonObjectMapper.readTree(response.text).get("mute")
         .filter { jn -> jn.get("assignment").get("text").textValue().startsWith(TAG) }
 
-    return objectMapper.readValue(alreadyMutedTestsOnTeamCity.toString())
+    return alreadyMutedTestsOnTeamCity.mapNotNull { jsonObjectMapper.treeToValue<MuteTestJson>(it) }
 }
 
 internal fun uploadMutedTests(uploadMap: Map<String, MuteTestJson>) {
     for ((_, muteTestJson) in uploadMap) {
         val response = khttp.post(
-            "https://buildserver.labs.intellij.net/app/rest/mutes",
+            "$buildServerUrl/app/rest/mutes",
             headers = headers,
-            data = objectMapper.writeValueAsString(muteTestJson),
+            data = jsonObjectMapper.writeValueAsString(muteTestJson),
             auth = authUser
         )
         checkResponseAndLog(response)
@@ -43,16 +44,20 @@ internal fun uploadMutedTests(uploadMap: Map<String, MuteTestJson>) {
 internal fun deleteMutedTests(deleteMap: Map<String, MuteTestJson>) {
     for ((_, muteTestJson) in deleteMap) {
         val response = khttp.delete(
-            "https://buildserver.labs.intellij.net/app/rest/mutes/id:${muteTestJson.id}",
+            "$buildServerUrl/app/rest/mutes/id:${muteTestJson.id}",
             headers = headers,
             auth = authUser
         )
-        checkResponseAndLog(response)
+        try {
+            checkResponseAndLog(response)
+        } catch (e: Exception) {
+            System.err.println(e.message)
+        }
     }
 }
 
 private fun checkResponseAndLog(response: Response) {
-    val isResponseBad = response.connection.responseCode / 100 != 2
+    val isResponseBad = response.connection.responseCode !in 200..299
     if (isResponseBad) {
         throw Exception(
             "${response.request.method}-request to ${response.request.url} failed:\n" +

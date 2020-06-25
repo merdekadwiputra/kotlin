@@ -18,7 +18,7 @@ fun main() {
  */
 fun syncMutedTestsOnTeamCityWithDatabase() {
     val remotelyMutedTests = getMutedTestsOnTeamcityForRootProject()
-    for (scope in Scope.values()) {
+    for (scope in Scope.values().filter { it.id != null }) {
         val remotelyMutedTestsForSpecificScope: Map<String, MuteTestJson> = filterMutedTestsByScope(remotelyMutedTests, scope)
         val locallyMutedTests: Map<String, MuteTestJson> = getMutedTestsFromDatabase(scope)
         val deleteList = remotelyMutedTestsForSpecificScope - locallyMutedTests.keys
@@ -31,7 +31,7 @@ fun syncMutedTestsOnTeamCityWithDatabase() {
 private fun getMutedTestsFromDatabase(scope: Scope): Map<String, MuteTestJson> {
     val mutedSet = MutedSet(loadMutedTests(scope.localDBPath))
     val mutedMap = mutableMapOf<String, MuteTestJson>()
-    for (muted in mutedSet.mutedFlakyTests()) {
+    for (muted in mutedSet.flakyTests) {
         val testName = formatClassnameWithInnerClasses(muted.key)
         mutedMap[testName] = createMuteTestJson(testName, muted.issue ?: "", scope)
     }
@@ -46,20 +46,22 @@ private fun formatClassnameWithInnerClasses(classname: String): String {
 
 private fun filterMutedTestsByScope(muteTestJson: List<MuteTestJson>, scope: Scope): Map<String, MuteTestJson> {
     val filterCondition = { testJson: MuteTestJson ->
-        if (scope.isBuildType)
-            testJson.scope.get("buildTypes") != null &&
-                    testJson.scope.get("buildTypes").get("buildType").toList().map {
-                        it.get("id").textValue()
-                    }.contains(scope.id)
-        else
-            testJson.scope.get("project") != null &&
-                    testJson.scope.get("project").get("id").textValue() == scope.id
+        if (scope.isBuildType) {
+            val buildTypes = testJson.scope.get("buildTypes")
+            val buildTypeIds = buildTypes?.get("buildType")?.toList()?.map {
+                it.get("id").textValue()
+            } ?: listOf()
+            buildTypeIds.contains(scope.id)
+        } else {
+            testJson.scope.get("project")?.get("id")?.textValue() == scope.id
+        }
     }
 
     return muteTestJson.filter(filterCondition)
         .flatMap { mutedTestJson ->
-            mutedTestJson.getTests().map { testname ->
-                testname to mutedTestJson
+            val testNames = mutedTestJson.target.get("tests").get("test").toList().map { it.get("name").textValue() }
+            testNames.map { testName ->
+                testName to mutedTestJson
             }
         }
         .toMap()
@@ -70,7 +72,7 @@ private const val mutesPackageName = "org.jetbrains.kotlin.test.mutes"
 
 // FIX ME WHEN BUNCH 192 REMOVED
 // FIX ME WHEN BUNCH as36 REMOVED
-internal enum class Scope(val id: String, val localDBPath: File, val isBuildType: Boolean) {
+internal enum class Scope(val id: String?, val localDBPath: File, val isBuildType: Boolean) {
     COMMON(System.getProperty("$mutesPackageName.tests.project.id"), File("$databaseDir/mute-common.csv"), false),
     IJ193(System.getProperty("$mutesPackageName.193"), File("$databaseDir/mute-platform.csv"), true),
     IJ192(System.getProperty("$mutesPackageName.192"), File("$databaseDir/mute-platform.csv.192"), true),
