@@ -87,6 +87,10 @@ abstract class AbstractKotlinCompileTool<T : CommonToolArguments>
     @get:Input
     internal var useFallbackCompilerSearch: Boolean = false
 
+    @get:Input
+    internal val compilerClasspathConfiguration
+    get() = project.configurations.getByName(COMPILER_CLASSPATH_CONFIGURATION_NAME).resolve().toList()
+
     @get:Classpath
     @get:InputFiles
     internal val computedCompilerClasspath: List<File> by project.provider {
@@ -97,7 +101,7 @@ abstract class AbstractKotlinCompileTool<T : CommonToolArguments>
             }
             ?: if (!useFallbackCompilerSearch) {
                 try {
-                    project.configurations.getByName(COMPILER_CLASSPATH_CONFIGURATION_NAME).resolve().toList()
+                    compilerClasspathConfiguration
                 } catch (e: Exception) {
                     logger.error(
                         "Could not resolve compiler classpath. " +
@@ -173,11 +177,8 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     protected val multiModuleICSettings: MultiModuleICSettings
         get() = MultiModuleICSettings(taskData.buildHistoryFile, useModuleDetection)
 
-    @get:Internal
-    private val pluginConfigurationProvider = project.provider {project.configurations.getByName(PLUGIN_CLASSPATH_CONFIGURATION_NAME)}
-
     val pluginClasspath: FileCollection
-    @Classpath @InputFiles get() = pluginConfigurationProvider.get()
+    @Classpath @InputFiles get() = project.configurations.getByName(PLUGIN_CLASSPATH_CONFIGURATION_NAME)
 
     @get:Internal
     internal val pluginOptions = CompilerPluginOptions()

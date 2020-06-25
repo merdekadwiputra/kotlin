@@ -30,12 +30,13 @@ internal open class InspectClassesForMultiModuleIC : DefaultTask() {
         (project.kotlinExtension as KotlinSingleJavaTargetExtension).target.defaultArtifactClassesListFile.get()
     }
 
-    @get:Input
-    internal val sourceSet
-        get() = project.convention.findPlugin(JavaPluginConvention::class.java)?.sourceSets?.findByName(sourceSetName)
+    @get:InputFiles
+    internal val sourceSetOutputClassesDir
+    get() = project.convention.findPlugin(JavaPluginConvention::class.java)?.sourceSets?.findByName(sourceSetName)?.output?.classesDirs
 
     @get:Internal
-    internal val fileTrees = project.provider{ sourceSet?.output?.classesDirs?.map { project.objects.fileTree().from(it).include("**/*.class") }}
+    internal val fileTrees
+        get() = sourceSetOutputClassesDir?.map { objects.fileTree().from(it).include("**/*.class") }
 
     @get:Internal
     internal val objects = project.objects
@@ -44,8 +45,8 @@ internal open class InspectClassesForMultiModuleIC : DefaultTask() {
     @get:InputFiles
     internal val classFiles: FileCollection
         get() {
-            if (sourceSet != null) {
-                val fileTrees = sourceSet!!.output.classesDirs.map { objects.fileTree().from(it).include("**/*.class") }
+            if (sourceSetOutputClassesDir != null) {
+                val fileTrees = sourceSetOutputClassesDir!!.map { objects.fileTree().from(it).include("**/*.class") }
                 return objects.fileCollection().from(fileTrees)
             }
             return objects.fileCollection()
