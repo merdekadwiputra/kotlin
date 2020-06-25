@@ -37,11 +37,11 @@ org.jetbrains.kotlin.idea.decompiler.stubBuilder.BuiltInDecompilerConsistencyTes
 org.jetbrains.kotlin.idea.decompiler.stubBuilder.BuiltInDecompilerTest.testBuiltInStubTreeEqualToStubTreeFromDecompiledText, No classes with this name found: kotlin.ArithmeticException,, FLAKY
 org.jetbrains.kotlin.idea.highlighter.HighlightingTestGenerated.testSuspend, Always red,,
 org.jetbrains.kotlin.idea.highlighter.NoErrorsInStdlibTest.testNoErrors, Always red,,
-org.jetbrains.kotlin.idea.maven.KotlinMavenInspectionTestGenerated.testWrongPhaseExecution, Always red,,
+org.jetbrains.kotlin.idea.maven.KotlinMavenInspectionTestGenerated.testWrongPhaseExecution, [*CHECK*] CREATED NEW FLAKY,, FLAKY
 org.jetbrains.kotlin.idea.maven.MavenMigrateTest.testMigrateApiAndLanguageVersions, flaky on windows,, FLAKY
 org.jetbrains.kotlin.idea.maven.configuration.MavenConfigureProjectByChangingFileTestGenerated.Jvm.testWithJava9ModuleInfo, Probably test data should be updated,,
 org.jetbrains.kotlin.idea.quickfix.DeprecatedSymbolUsageFixSpecialTest.testDefaultParameterValuesFromLibrary, Always red because of additional import,, FLAKY
-org.jetbrains.kotlin.idea.quickfix.QuickFixMultiModuleTestGenerated.CreateActual.testWithTestDummy, Very flaky on teamcity,, FLAKY
+org.jetbrains.kotlin.idea.quickfix.QuickFixMultiModuleTestGenerated.CreateActual.testWithTestDummy, CHECK UNMUTED FLAKY,,
 org.jetbrains.kotlin.idea.quickfix.QuickFixTestGenerated.CreateFromUsage.CreateClass.CallExpression.testCallInWhenEntry, KT-35728,,
 org.jetbrains.kotlin.idea.quickfix.QuickFixTestGenerated.Libraries.testJunit, ERROR: Couldn't find the following libraries,,
 org.jetbrains.kotlin.idea.quickfix.QuickFixTestGenerated.Libraries.testTestNG, ERROR: Couldn't find the following libraries,,
