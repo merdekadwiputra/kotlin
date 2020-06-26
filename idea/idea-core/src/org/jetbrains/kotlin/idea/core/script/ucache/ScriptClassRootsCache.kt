@@ -165,7 +165,7 @@ class ScriptClassRootsCache(
 
     class FullUpdate(override val cache: ScriptClassRootsCache) : Updates {
         override val changed: Boolean get() = true
-        override val hasNewRoots: Boolean get() = true
+        override val hasNewRoots: Boolean get() = cache.allDependenciesClassFiles.isNotEmpty() && cache.allDependenciesSources.isNotEmpty()
         override val hasUpdatedScripts: Boolean get() = true
         override fun isScriptChanged(scriptPath: String): Boolean = true
     }

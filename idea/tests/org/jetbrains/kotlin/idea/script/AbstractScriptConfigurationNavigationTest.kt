@@ -27,5 +27,6 @@ abstract class AbstractScriptConfigurationNavigationTest : AbstractScriptConfigu
         val actualFile = GotoCheck.getFileWithDir(resolved)
 
         Assert.assertEquals(expectedFile, actualFile)
+        assert(false)
     }
 }
